@@ -9,11 +9,11 @@ export const getMetadataItems = (
       : 'http://localhost:3000'
   const pathname = baseUrl + slug
   const title = templateTitle
-    ? `${templateTitle} | Your Team Name 2025`
-    : 'Your Team Name 2025'
+    ? `${templateTitle} | IP Counter 2025`
+    : 'IP Counter 2025'
   const description = templateDescription
-    ? 'Your Description Event or Team'
-    : 'Your Description Event or Team'
+    ? 'Count your IPS Now!!'
+    : 'Count your IPS Now!!'
   // const ogUrl = new URL(
   //   baseUrl + `/api/og?title=${templateTitle}&description=${description}`,
   // ).href;
