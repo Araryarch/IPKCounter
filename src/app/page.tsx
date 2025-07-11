@@ -1,385 +1,532 @@
 'use client'
 
-import Typography from '@/components/Typography'
-import { Button } from '@/components/ui/button'
-import { ArrowRight } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import {
-  motion,
-  useScroll,
-  useTransform,
-  useMotionValue,
-  useSpring,
-  AnimatePresence,
-  Variants,
-  MotionStyle,
-} from 'framer-motion'
-import { useRef, useState, useEffect } from 'react'
+  Plus,
+  BookOpen,
+  Award,
+  Target,
+  Trash2,
+  GraduationCap,
+  AlertCircle,
+  CheckCircle2,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Progress } from '@/components/ui/progress'
+import { mataKuliah } from './data/matkul'
 
-interface MousePosition {
-  x: number
-  y: number
+interface CourseData {
+  kode: string
+  nama: string
+  sks: number
+  nilai: string
+  n: number
 }
 
-interface WindowDimensions {
-  width: number
-  height: number
+const nilaiToAngka = (nilai: string): number => {
+  const konversi: Record<string, number> = {
+    A: 4.0,
+    AB: 3.5,
+    B: 3.0,
+    BC: 2.5,
+    C: 2.0,
+    D: 1.0,
+    E: 0.0,
+  }
+  return konversi[nilai.toUpperCase()] ?? 0
 }
 
-const useMousePosition = (): MousePosition => {
-  const [mousePosition, setMousePosition] = useState<MousePosition>({
-    x: 0,
-    y: 0,
+const getGradeColor = (grade: string): string => {
+  const colors: Record<string, string> = {
+    A: 'bg-green-500',
+    AB: 'bg-green-400',
+    B: 'bg-blue-500',
+    BC: 'bg-blue-400',
+    C: 'bg-yellow-500',
+    D: 'bg-orange-500',
+    E: 'bg-red-500',
+  }
+  return colors[grade] || 'bg-gray-500'
+}
+
+const getAllowedSemesters = (current: string): string[] => {
+  const currentNumber = Number.parseInt(current.split(' ')[1])
+  const parity = currentNumber % 2
+  return Object.keys(mataKuliah).filter((smt) => {
+    const num = Number.parseInt(smt.split(' ')[1])
+    if (num === currentNumber) return false
+    if (num > currentNumber) return num % 2 === parity
+    return true
   })
+}
+
+export default function CourseSelectionApp() {
+  const [selectedSemester, setSelectedSemester] = useState<string>('')
+  const [sourceSemester, setSourceSemester] = useState<string>('')
+  const [selectedCourse, setSelectedCourse] = useState<string>('')
+  const [data, setData] = useState<CourseData[]>([])
+  const [showAlert, setShowAlert] = useState<{
+    type: 'error' | 'success'
+    message: string
+  } | null>(null)
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY })
-    }
+    if (!selectedSemester) return
 
-    if (typeof window !== 'undefined') {
-      window.addEventListener('mousemove', handleMouseMove)
-      return () => window.removeEventListener('mousemove', handleMouseMove)
-    }
-  }, [])
+    const courses = mataKuliah[selectedSemester] || []
+    const filteredCourses: CourseData[] = []
 
-  return mousePosition
-}
-
-const useWindowDimensions = (): WindowDimensions => {
-  const [dimensions, setDimensions] = useState<WindowDimensions>({
-    width: 1,
-    height: 1,
-  })
-
-  useEffect(() => {
-    const handleResize = () => {
-      setDimensions({
-        width: window.innerWidth,
-        height: window.innerHeight,
+    let sksAdded = 0
+    for (const c of courses) {
+      if (sksAdded + c.sks > 24) break
+      filteredCourses.push({
+        kode: c.kode,
+        nama: c.nama,
+        sks: c.sks,
+        nilai: '',
+        n: 0,
       })
+      sksAdded += c.sks
     }
 
-    if (typeof window !== 'undefined') {
-      handleResize()
+    setData(filteredCourses)
+    setShowAlert({
+      type: 'success',
+      message: `Loaded ${filteredCourses.length} courses from ${selectedSemester}`,
+    })
+    setTimeout(() => setShowAlert(null), 3000)
+  }, [selectedSemester])
 
-      window.addEventListener('resize', handleResize)
-      return () => window.removeEventListener('resize', handleResize)
+  const handleAddCourse = () => {
+    if (!sourceSemester || !selectedCourse) return
+
+    const course = mataKuliah[sourceSemester]?.find(
+      (c) => c.kode === selectedCourse,
+    )
+    if (!course) return
+
+    const totalSKS = data.reduce((acc, cur) => acc + cur.sks, 0)
+    if (totalSKS + course.sks > 24) {
+      setShowAlert({
+        type: 'error',
+        message: 'Cannot add course: Total credits would exceed 24 limit',
+      })
+      setTimeout(() => setShowAlert(null), 3000)
+      return
     }
-  }, [])
 
-  return dimensions
-}
+    if (data.find((d) => d.kode === course.kode)) {
+      setShowAlert({
+        type: 'error',
+        message: 'Course already added to your selection',
+      })
+      setTimeout(() => setShowAlert(null), 3000)
+      return
+    }
 
-const CharacterReveal: React.FC<{
-  text: string
-  delay?: number
-}> = ({ text, delay = 0 }) => {
-  return (
-    <span className="inline-block overflow-hidden">
-      {text.split('').map((char, index) => (
-        <motion.span
-          key={index}
-          className="inline-block"
-          initial={{ y: 100 }}
-          animate={{ y: 0 }}
-          transition={{
-            duration: 0.5,
-            delay: delay + index * 0.03,
-            ease: [0.25, 0.1, 0.25, 1.0],
-          }}
-        >
-          {char === ' ' ? '\u00A0' : char}
-        </motion.span>
-      ))}
-    </span>
-  )
-}
+    setData((prev) => [
+      ...prev,
+      {
+        kode: course.kode,
+        nama: course.nama,
+        sks: course.sks,
+        nilai: '',
+        n: 0,
+      },
+    ])
 
-export default function Home() {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const { scrollY } = useScroll()
-  const mousePosition = useMousePosition()
-  const { width: windowWidth, height: windowHeight } = useWindowDimensions()
-  const [isLoaded, setIsLoaded] = useState<boolean>(false)
-  const [cursorVariant, setCursorVariant] = useState<'default' | 'button'>(
-    'default',
-  )
-
-  const mouseX = useMotionValue(0)
-  const mouseY = useMotionValue(0)
-
-  useEffect(() => {
-    mouseX.set(mousePosition.x)
-    mouseY.set(mousePosition.y)
-  }, [mousePosition, mouseX, mouseY])
-
-  const opacity = useTransform(scrollY, [0, 300], [1, 0])
-
-  const cursorX = useMotionValue(-100)
-  const cursorY = useMotionValue(-100)
-
-  const springConfig = { damping: 25, stiffness: 700 }
-  const cursorXSpring = useSpring(cursorX, springConfig)
-  const cursorYSpring = useSpring(cursorY, springConfig)
-
-  useEffect(() => {
-    cursorX.set(mousePosition.x)
-    cursorY.set(mousePosition.y)
-  }, [mousePosition, cursorX, cursorY])
-
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoaded(true), 500)
-    return () => clearTimeout(timer)
-  }, [])
-
-  const enterButton = () => setCursorVariant('button')
-  const leaveButton = () => setCursorVariant('default')
-
-  const cursorVariants: Variants = {
-    default: {
-      width: 32,
-      height: 32,
-      backgroundColor: 'rgba(255, 255, 255, 0.3)',
-      border: '1px solid rgba(255, 255, 255, 0.5)',
-    },
-    button: {
-      width: 80,
-      height: 80,
-      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-      border: '1px solid rgba(255, 255, 255, 0.8)',
-    },
+    setShowAlert({
+      type: 'success',
+      message: `Successfully added ${course.nama}`,
+    })
+    setTimeout(() => setShowAlert(null), 3000)
+    setSelectedCourse('')
   }
 
-  const cursorStyle: MotionStyle = {
-    translateX: '-50%',
-    translateY: '-50%',
-    x: cursorXSpring,
-    y: cursorYSpring,
+  const handleRemoveCourse = (kode: string) => {
+    setData((prev) => prev.filter((item) => item.kode !== kode))
+    setShowAlert({
+      type: 'success',
+      message: 'Course removed successfully',
+    })
+    setTimeout(() => setShowAlert(null), 3000)
   }
 
+  const handleNilaiChange = (kode: string, nilai: string) => {
+    setData((prev) =>
+      prev.map((item) =>
+        item.kode === kode ? { ...item, nilai, n: nilaiToAngka(nilai) } : item,
+      ),
+    )
+  }
+
+  const semesterOptions = Object.keys(mataKuliah)
+  const allowedSemesterOptions = selectedSemester
+    ? getAllowedSemesters(selectedSemester)
+    : []
+  const availableCourses =
+    sourceSemester && mataKuliah[sourceSemester]
+      ? mataKuliah[sourceSemester].filter(
+          (c) => !data.find((d) => d.kode === c.kode),
+        )
+      : []
+
+  const totalSKS = data.reduce((acc, cur) => acc + cur.sks, 0)
+  const totalBobot = data.reduce((acc, cur) => acc + cur.n * cur.sks, 0)
+  const IPS = totalSKS > 0 ? (totalBobot / totalSKS).toFixed(2) : '0.00'
+  const creditProgress = (totalSKS / 24) * 100
+  const gpaProgress = (Number.parseFloat(IPS) / 4) * 100
+
   return (
-    <>
-      <motion.div
-        className="fixed top-0 left-0 rounded-full pointer-events-none z-50 backdrop-blur-sm hidden md:block"
-        variants={cursorVariants}
-        animate={cursorVariant}
-        style={cursorStyle}
-      />
-
-      <AnimatePresence>
-        {!isLoaded && (
-          <motion.div
-            className="fixed inset-0 bg-black z-50 flex items-center justify-center"
-            exit={{
-              height: 0,
-              transition: { duration: 1.5, ease: [0.76, 0, 0.24, 1] },
-            }}
-          >
-            <motion.div
-              className="text-white text-3xl"
-              exit={{ opacity: 0, y: -50, transition: { duration: 0.5 } }}
-            >
-              <CharacterReveal text="YOUR TEAM NAME" delay={0.2} />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="relative overflow-hidden bg-black" ref={containerRef}>
-        <div className="absolute inset-0 z-0 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/50 to-black z-10" />
-          <video
-            autoPlay
-            muted
-            loop
-            playsInline
-            className="absolute min-w-full min-h-full object-cover"
-          >
-            <source src="/your-background-video.mp4" type="video/mp4" />
-          </video>
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        <div className="text-center space-y-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-900 rounded-2xl shadow-sm">
+            <GraduationCap className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">
+              Course Selection
+            </h1>
+            <p className="text-gray-600 text-lg mt-2 max-w-2xl mx-auto">
+              Plan your academic semester with intelligent course management
+            </p>
+          </div>
         </div>
 
-        <motion.div
-          className="absolute inset-0 z-10 mix-blend-overlay opacity-30"
-          style={{
-            backgroundImage: "url('/noise-texture.png')",
-            backgroundRepeat: 'repeat',
-          }}
-          animate={{
-            x: [0, 100],
-            y: [0, 100],
-          }}
-          transition={{
-            repeat: Infinity,
-            repeatType: 'mirror',
-            duration: 20,
-            ease: 'linear',
-          }}
-        />
-
-        <motion.div
-          className="relative z-20 flex flex-col justify-center items-center w-full min-h-screen px-4 py-16 md:py-0 max-w-7xl mx-auto"
-          style={{ opacity }}
-        >
-          <motion.div
-            className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full bg-gradient-to-r from-indigo-500/20 to-purple-500/10 blur-3xl"
-            style={{
-              x: useTransform(mouseX, [0, windowWidth], [-20, 20]),
-              y: useTransform(mouseY, [0, windowHeight], [-20, 20]),
-            }}
-          />
-          <motion.div
-            className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-gradient-to-r from-blue-500/20 to-cyan-500/10 blur-3xl"
-            style={{
-              x: useTransform(mouseX, [0, windowWidth], [20, -20]),
-              y: useTransform(mouseY, [0, windowHeight], [20, -20]),
-            }}
-          />
-
-          <div className="text-center space-y-8 max-w-5xl">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 2, duration: 0.8 }}
-              className="inline-block px-6 py-2 bg-white/5 backdrop-blur-md rounded-full mb-4 border border-white/10"
+        {showAlert && (
+          <Alert
+            className={`${
+              showAlert.type === 'error'
+                ? 'border-red-300 bg-red-50'
+                : 'border-green-300 bg-green-50'
+            } transition-all duration-300`}
+          >
+            {showAlert.type === 'error' ? (
+              <AlertCircle className="h-4 w-4 text-red-700" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4 text-green-700" />
+            )}
+            <AlertDescription
+              className={
+                showAlert.type === 'error' ? 'text-red-800' : 'text-green-800'
+              }
             >
-              <span className="text-sm font-medium text-white/80 flex items-center justify-center">
-                Creating award-winning digital experiences since 2025
-              </span>
-            </motion.div>
+              {showAlert.message}
+            </AlertDescription>
+          </Alert>
+        )}
 
-            <div className="overflow-hidden">
-              <motion.div
-                initial={{ y: 100 }}
-                animate={{ y: 0 }}
-                transition={{
-                  delay: 2.2,
-                  duration: 0.8,
-                  ease: [0.25, 0.1, 0.25, 1.0],
-                }}
-              >
-                <Typography
-                  variant="h1"
-                  font="ClashDisplay"
-                  weight="bold"
-                  className="text-white text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-tight"
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            <Card className="shadow-sm border border-gray-200 bg-white">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-xl text-gray-900">
+                  <BookOpen className="w-5 h-5 text-gray-700" />
+                  Select Current Semester
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Select
+                  value={selectedSemester}
+                  onValueChange={setSelectedSemester}
                 >
-                  <span className="inline-block">
-                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-cyan-300 to-white">
-                      Crafting
-                    </span>
-                  </span>{' '}
-                  <span className="inline-block mt-2 md:mt-4">
-                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-400 to-purple-400">
-                      Digital
-                    </span>
-                  </span>{' '}
-                  <span className="inline-block mt-2 md:mt-4">
-                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-400 to-white">
-                      Masterpieces
-                    </span>
-                  </span>
-                </Typography>
-              </motion.div>
-            </div>
+                  <SelectTrigger className="h-12 text-base border-gray-300 hover:border-gray-400 transition-colors text-gray-900">
+                    <SelectValue placeholder="Choose your current semester" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {semesterOptions.map((smt) => (
+                      <SelectItem
+                        key={smt}
+                        value={smt}
+                        className="text-base py-3 text-gray-900"
+                      >
+                        {smt}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 2.8, duration: 0.8 }}
-            >
-              <Typography
-                variant="bt"
-                className="text-white/70 max-w-2xl mx-auto text-lg md:text-xl"
-              >
-                We blend cutting-edge technology with immersive design to create
-                experiences that captivate, inspire, and transform digital
-                landscapes.
-              </Typography>
-            </motion.div>
+            {selectedSemester && (
+              <Card className="shadow-sm border border-gray-200 bg-white">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-xl text-gray-900">
+                    <Plus className="w-5 h-5 text-gray-700" />
+                    Add Additional Course
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 block">
+                        Source Semester
+                      </label>
+                      <Select
+                        value={sourceSemester}
+                        onValueChange={setSourceSemester}
+                      >
+                        <SelectTrigger className="h-11 border-gray-300 hover:border-gray-400 transition-colors text-gray-900">
+                          <SelectValue placeholder="Select semester" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allowedSemesterOptions.map((smt) => (
+                            <SelectItem
+                              key={smt}
+                              value={smt}
+                              className="text-gray-900"
+                            >
+                              {smt}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 block">
+                        Available Courses
+                      </label>
+                      <Select
+                        value={selectedCourse}
+                        onValueChange={setSelectedCourse}
+                      >
+                        <SelectTrigger className="h-11 border-gray-300 hover:border-gray-400 transition-colors text-gray-900">
+                          <SelectValue placeholder="Select course" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableCourses.map((course) => (
+                            <SelectItem
+                              key={course.kode}
+                              value={course.kode}
+                              className="text-gray-900"
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <span>{course.nama}</span>
+                                <Badge
+                                  variant="secondary"
+                                  className="ml-2 bg-gray-100 text-gray-800"
+                                >
+                                  {course.sks} SKS
+                                </Badge>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleAddCourse}
+                    disabled={!sourceSemester || !selectedCourse}
+                    className="w-full h-11 bg-gray-900 hover:bg-gray-800 text-white transition-all duration-200"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Course
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
-            <motion.div
-              className="flex flex-col sm:flex-row gap-4 justify-center pt-8"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 3, duration: 0.8 }}
-            >
-              <motion.div
-                onMouseEnter={enterButton}
-                onMouseLeave={leaveButton}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Button
-                  size="lg"
-                  className="rounded-full text-lg px-10 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 border-none shadow-lg shadow-blue-700/20"
-                >
-                  <span>Start Your Journey</span>
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </motion.div>
-
-              <motion.div
-                onMouseEnter={enterButton}
-                onMouseLeave={leaveButton}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="rounded-full text-lg px-10 py-6 bg-neutral-700 border-white/20 text-white hover:bg-white/10 backdrop-blur-md"
-                >
-                  View Our Work
-                </Button>
-              </motion.div>
-            </motion.div>
+            {data.length > 0 && (
+              <Card className="shadow-sm border border-gray-200 bg-white">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center justify-between">
+                    <span className="flex items-center gap-2 text-xl text-gray-900">
+                      <BookOpen className="w-5 h-5 text-gray-700" />
+                      Selected Courses ({data.length})
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className="text-sm border-gray-300 text-gray-700"
+                    >
+                      {totalSKS}/24 Credits
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {data.map((item, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all duration-200"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-2">
+                            <Badge
+                              variant="secondary"
+                              className="font-mono text-xs bg-gray-200 text-gray-800"
+                            >
+                              {item.kode}
+                            </Badge>
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-gray-300 text-gray-600"
+                            >
+                              {item.sks} SKS
+                            </Badge>
+                          </div>
+                          <h3 className="font-medium text-gray-900 truncate">
+                            {item.nama}
+                          </h3>
+                        </div>
+                        <div className="flex items-center gap-3 ml-4">
+                          <Select
+                            value={item.nilai}
+                            onValueChange={(value) =>
+                              handleNilaiChange(item.kode, value)
+                            }
+                          >
+                            <SelectTrigger className="w-20 h-9 border-gray-300 text-gray-900">
+                              <SelectValue placeholder="—" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {['A', 'AB', 'B', 'BC', 'C', 'D', 'E'].map(
+                                (grade) => (
+                                  <SelectItem
+                                    key={grade}
+                                    value={grade}
+                                    className="text-gray-900"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className={`w-2 h-2 rounded-full ${getGradeColor(grade)}`}
+                                      />
+                                      {grade}
+                                    </div>
+                                  </SelectItem>
+                                ),
+                              )}
+                            </SelectContent>
+                          </Select>
+                          {item.nilai && (
+                            <Badge className="bg-gray-800 text-white">
+                              {item.n.toFixed(1)}
+                            </Badge>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveCourse(item.kode)}
+                            className="text-gray-600 hover:text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
-          <motion.div
-            className="absolute right-10 md:right-20 top-1/3 hidden md:block"
-            style={{
-              rotateX: useTransform(mouseY, [0, windowHeight], [15, -15]),
-              rotateY: useTransform(mouseX, [0, windowWidth], [-15, 15]),
-              rotate: useTransform(scrollY, [0, 500], [0, 180]),
-            }}
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{
-              delay: 3.2,
-              duration: 1,
-              ease: [0.25, 0.1, 0.25, 1.0],
-            }}
-          >
-            <div className="w-32 h-32 bg-gradient-to-br from-blue-500/30 to-purple-500/30 backdrop-blur-md rounded-2xl border border-white/20 shadow-xl"></div>
-          </motion.div>
+          <div className="space-y-6">
+            <Card className="shadow-sm border border-gray-200 bg-white">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-lg text-gray-900">
+                  <Target className="w-5 h-5 text-gray-700" />
+                  Credit Progress
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl font-bold text-gray-900">
+                    {totalSKS}
+                  </span>
+                  <span className="text-sm text-gray-500">/ 24 Credits</span>
+                </div>
+                <Progress value={creditProgress} className="h-3" />
+                <div className="text-sm text-gray-600">
+                  {24 - totalSKS} credits remaining
+                </div>
+              </CardContent>
+            </Card>
 
-          <motion.div
-            className="absolute left-10 md:left-20 bottom-1/3 hidden md:block"
-            style={{
-              rotateX: useTransform(mouseY, [0, windowHeight], [15, -15]),
-              rotateY: useTransform(mouseX, [0, windowWidth], [-15, 15]),
-              rotate: useTransform(scrollY, [0, 500], [0, -180]),
-            }}
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{
-              delay: 3.4,
-              duration: 1,
-              ease: [0.25, 0.1, 0.25, 1.0],
-            }}
-          >
-            <div className="w-24 h-24 bg-gradient-to-br from-purple-500/30 to-pink-500/30 backdrop-blur-md rounded-full border border-white/20 shadow-xl"></div>
-          </motion.div>
-        </motion.div>
+            <Card className="shadow-sm border border-gray-200 bg-white">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-lg text-gray-900">
+                  <Award className="w-5 h-5 text-gray-700" />
+                  Current GPA
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl font-bold text-gray-900">
+                    {IPS}
+                  </span>
+                  <span className="text-sm text-gray-500">/ 4.00</span>
+                </div>
+                <Progress value={gpaProgress} className="h-3" />
+                <div className="text-sm text-gray-600">
+                  {Number.parseFloat(IPS) >= 3.5
+                    ? 'Excellent'
+                    : Number.parseFloat(IPS) >= 3.0
+                      ? 'Good'
+                      : Number.parseFloat(IPS) >= 2.5
+                        ? 'Satisfactory'
+                        : 'Needs Improvement'}
+                </div>
+              </CardContent>
+            </Card>
 
-        <motion.div
-          className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/30 to-transparent"
-          initial={{ scaleX: 0, opacity: 0 }}
-          animate={{ scaleX: 1, opacity: 1 }}
-          transition={{ delay: 3.5, duration: 1.5 }}
-        />
+            {data.length > 0 && (
+              <Card className="shadow-sm border border-gray-200 bg-white">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg text-gray-900">
+                    Quick Stats
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Total Courses</span>
+                    <Badge
+                      variant="secondary"
+                      className="bg-gray-100 text-gray-800"
+                    >
+                      {data.length}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">
+                      Graded Courses
+                    </span>
+                    <Badge
+                      variant="secondary"
+                      className="bg-gray-100 text-gray-800"
+                    >
+                      {data.filter((item) => item.nilai).length}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">
+                      Avg Credits/Course
+                    </span>
+                    <Badge
+                      variant="secondary"
+                      className="bg-gray-100 text-gray-800"
+                    >
+                      {data.length > 0
+                        ? (totalSKS / data.length).toFixed(1)
+                        : '0'}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
       </div>
-    </>
+    </div>
   )
 }

@@ -27,7 +27,7 @@ export default function RootLayout({
           type="image/x-icon"
         />
       </head>
-      <body className={cn(Inter.variable, ClashDisplay.variable, 'dark')}>
+      <body className={cn(Inter.variable, ClashDisplay.variable)}>
         <Providers>{children}</Providers>
         <GoogleAnalytics gaId="" />
       </body>
