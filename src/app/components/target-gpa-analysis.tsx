@@ -1,8 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import { TrendingUp, Calculator, AlertCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface TargetGPAAnalysisProps {
   targetGPA: string
@@ -15,9 +18,23 @@ export function TargetGPAAnalysis({
   setTargetGPA,
   scenariosLength,
 }: TargetGPAAnalysisProps) {
-  const showResults = targetGPA && scenariosLength > 0
+  const [inputGPA, setInputGPA] = useState(targetGPA)
+  const [analyzed, setAnalyzed] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  const handleAnalyze = () => {
+    setLoading(true)
+    setAnalyzed(false)
+    setTimeout(() => {
+      setTargetGPA(inputGPA)
+      setLoading(false)
+      setAnalyzed(true)
+    }, 1000)
+  }
+
+  const showResults = analyzed && scenariosLength > 0
   const showNoResults =
-    targetGPA && scenariosLength === 0 && Number.parseFloat(targetGPA) > 0
+    analyzed && scenariosLength === 0 && Number.parseFloat(inputGPA) > 0
 
   return (
     <Card className="shadow-sm border border-gray-200 bg-white">
@@ -37,12 +54,22 @@ export function TargetGPAAnalysis({
             min="0"
             max="4"
             step="0.01"
-            value={targetGPA}
-            onChange={(e) => setTargetGPA(e.target.value)}
+            value={inputGPA}
+            onChange={(e) => setInputGPA(e.target.value)}
             placeholder="Enter your target GPA"
             className="h-11 border-gray-300 hover:border-gray-400 transition-colors"
           />
         </div>
+        <Button
+          onClick={handleAnalyze}
+          disabled={!inputGPA || loading}
+          className="w-full"
+        >
+          {loading ? 'Analyzing...' : 'Analyze'}
+        </Button>
+
+        {loading && <Skeleton className="h-16 w-full rounded-lg" />}
+
         {showResults && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
@@ -53,13 +80,14 @@ export function TargetGPAAnalysis({
             </div>
             <p className="text-sm text-blue-700">
               Found <strong>{scenariosLength}</strong> possible scenarios to
-              achieve GPA ≥ {targetGPA}
+              achieve GPA ≥ {inputGPA}
             </p>
             <p className="text-xs text-blue-600 mt-1">
               Showing scenarios ranked from easiest to hardest
             </p>
           </div>
         )}
+
         {showNoResults && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
@@ -69,7 +97,7 @@ export function TargetGPAAnalysis({
               </span>
             </div>
             <p className="text-sm text-red-700">
-              Target GPA of {targetGPA} is not achievable with current course
+              Target GPA of {inputGPA} is not achievable with current course
               selection.
             </p>
           </div>
