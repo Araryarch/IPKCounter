@@ -108,8 +108,8 @@ export function GradeScenarios({
         </CardTitle>
       </CardHeader>
       <div className="px-6 pb-4 border-b border-gray-200">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <span className="text-sm font-medium text-gray-700">
               Filter by Difficulty:
             </span>
@@ -117,7 +117,7 @@ export function GradeScenarios({
               value={difficultyFilter}
               onValueChange={setDifficultyFilter}
             >
-              <SelectTrigger className="w-40 h-9 border-gray-300">
+              <SelectTrigger className="w-full sm:w-40 h-9 border-gray-300">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -143,8 +143,8 @@ export function GradeScenarios({
             key={startIndex + index}
             className="border border-gray-200 rounded-lg p-4 space-y-3"
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-3 flex-wrap">
                 <Badge className="bg-gray-800 text-white">
                   Scenario {startIndex + index + 1}
                 </Badge>
@@ -158,7 +158,7 @@ export function GradeScenarios({
                 </Badge>
               </div>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-xs">
               {scenario.totalA > 0 && (
                 <div className="flex items-center gap-1">
                   <div className="w-2 h-2 rounded-full bg-green-500" />
@@ -212,10 +212,10 @@ export function GradeScenarios({
                     key={course.kode}
                     className="flex items-center justify-between text-sm bg-gray-50 rounded p-2"
                   >
-                    <span className="font-mono text-xs text-gray-600">
+                    <span className="font-mono text-xs text-gray-600 truncate pr-2">
                       {course.nama}
                     </span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <div
                         className={`w-2 h-2 rounded-full ${getGradeColor(scenario.grades[course.kode])}`}
                       />
@@ -235,14 +235,14 @@ export function GradeScenarios({
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200">
+            <div className="flex items-center gap-2 order-2 sm:order-1">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentPage(1)}
                 disabled={currentPage === 1}
-                className="flex items-center gap-1"
+                className="flex items-center gap-1 px-3 py-1.5"
               >
                 First
               </Button>
@@ -251,14 +251,15 @@ export function GradeScenarios({
                 size="sm"
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 px-3 py-1.5"
               >
                 <ChevronLeft className="w-4 h-4" />
-                Previous
+                <span className="hidden sm:inline">Previous</span>
+                <span className="sm:hidden">Prev</span>
               </Button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 order-1 sm:order-2">
               <span className="text-sm text-gray-600">Page</span>
               <Input
                 type="number"
@@ -273,7 +274,7 @@ export function GradeScenarios({
               <span className="text-sm text-gray-600">of {totalPages}</span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 order-3">
               <Button
                 variant="outline"
                 size="sm"
@@ -281,9 +282,10 @@ export function GradeScenarios({
                   setCurrentPage(Math.min(totalPages, currentPage + 1))
                 }
                 disabled={currentPage === totalPages}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 px-3 py-1.5"
               >
-                Next
+                <span className="hidden sm:inline">Next</span>
+                <span className="sm:hidden">Next</span>
                 <ChevronRight className="w-4 h-4" />
               </Button>
               <Button
@@ -291,7 +293,7 @@ export function GradeScenarios({
                 size="sm"
                 onClick={() => setCurrentPage(totalPages)}
                 disabled={currentPage === totalPages}
-                className="flex items-center gap-1"
+                className="flex items-center gap-1 px-3 py-1.5"
               >
                 Last
               </Button>
