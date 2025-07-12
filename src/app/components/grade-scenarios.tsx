@@ -1,5 +1,7 @@
 'use client'
 
+import React from 'react'
+import { useState } from 'react'
 import { Target, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -11,6 +13,14 @@ import {
   getDifficultyLabel,
   SCENARIOS_PER_PAGE,
 } from '@/constants/convert'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 
 interface GradeScenariosProps {
   scenarios: GradeScenario[]
@@ -25,12 +35,61 @@ export function GradeScenarios({
   currentPage,
   setCurrentPage,
 }: GradeScenariosProps) {
+  const [difficultyFilter, setDifficultyFilter] = useState<string>('all')
+  const [pageInput, setPageInput] = useState<string>(currentPage.toString())
+
+  React.useEffect(() => {
+    setPageInput(currentPage.toString())
+  }, [currentPage])
+
+  React.useEffect(() => {
+    setCurrentPage(1)
+  }, [difficultyFilter, setCurrentPage])
+
   if (scenarios.length === 0) return null
 
-  const totalPages = Math.ceil(scenarios.length / SCENARIOS_PER_PAGE)
+  const filteredScenarios = scenarios.filter((scenario) => {
+    if (difficultyFilter === 'all') return true
+    const difficulty = scenario.difficulty
+    switch (difficultyFilter) {
+      case 'very-easy':
+        return difficulty <= 2
+      case 'easy':
+        return difficulty > 2 && difficulty <= 4
+      case 'moderate':
+        return difficulty > 4 && difficulty <= 6
+      case 'hard':
+        return difficulty > 6 && difficulty <= 8
+      case 'very-hard':
+        return difficulty > 8
+      default:
+        return true
+    }
+  })
+
+  const totalPages = Math.ceil(filteredScenarios.length / SCENARIOS_PER_PAGE)
   const startIndex = (currentPage - 1) * SCENARIOS_PER_PAGE
   const endIndex = startIndex + SCENARIOS_PER_PAGE
-  const currentScenarios = scenarios.slice(startIndex, endIndex)
+  const currentScenarios = filteredScenarios.slice(startIndex, endIndex)
+
+  const handlePageInputChange = (value: string) => {
+    setPageInput(value)
+  }
+
+  const handlePageInputSubmit = () => {
+    const page = Number.parseInt(pageInput)
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      setCurrentPage(page)
+    } else {
+      setPageInput(currentPage.toString())
+    }
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handlePageInputSubmit()
+    }
+  }
 
   return (
     <Card className="shadow-sm border border-gray-200 bg-white">
@@ -48,6 +107,36 @@ export function GradeScenarios({
           </Badge>
         </CardTitle>
       </CardHeader>
+      <div className="px-6 pb-4 border-b border-gray-200">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700">
+              Filter by Difficulty:
+            </span>
+            <Select
+              value={difficultyFilter}
+              onValueChange={setDifficultyFilter}
+            >
+              <SelectTrigger className="w-40 h-9 border-gray-300">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Difficulties</SelectItem>
+                <SelectItem value="very-easy">Very Easy</SelectItem>
+                <SelectItem value="easy">Easy</SelectItem>
+                <SelectItem value="moderate">Moderate</SelectItem>
+                <SelectItem value="hard">Hard</SelectItem>
+                <SelectItem value="very-hard">Very Hard</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <span>
+              Showing {filteredScenarios.length} of {scenarios.length} scenarios
+            </span>
+          </div>
+        </div>
+      </div>
       <CardContent className="space-y-4">
         {currentScenarios.map((scenario, index) => (
           <div
@@ -147,45 +236,66 @@ export function GradeScenarios({
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="flex items-center gap-2"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Previous
-            </Button>
             <div className="flex items-center gap-2">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const pageNum =
-                  Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i
-                return (
-                  <Button
-                    key={pageNum}
-                    variant={pageNum === currentPage ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setCurrentPage(pageNum)}
-                    className="w-8 h-8 p-0"
-                  >
-                    {pageNum}
-                  </Button>
-                )
-              })}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1"
+              >
+                First
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="flex items-center gap-2"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                setCurrentPage(Math.min(totalPages, currentPage + 1))
-              }
-              disabled={currentPage === totalPages}
-              className="flex items-center gap-2"
-            >
-              Next
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Page</span>
+              <Input
+                type="number"
+                min="1"
+                max={totalPages}
+                value={pageInput}
+                onChange={(e) => handlePageInputChange(e.target.value)}
+                onBlur={handlePageInputSubmit}
+                onKeyPress={handleKeyPress}
+                className="w-16 h-8 text-center text-sm"
+              />
+              <span className="text-sm text-gray-600">of {totalPages}</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setCurrentPage(Math.min(totalPages, currentPage + 1))
+                }
+                disabled={currentPage === totalPages}
+                className="flex items-center gap-2"
+              >
+                Next
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="flex items-center gap-1"
+              >
+                Last
+              </Button>
+            </div>
           </div>
         )}
       </CardContent>
