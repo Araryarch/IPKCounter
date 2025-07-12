@@ -23,7 +23,10 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
-import { mataKuliah } from './data/matkul'
+import { useMemo } from 'react'
+
+import { mataKuliahRPL } from './data/matkul-rpl'
+import { mataKuliahInformatika } from './data/matkul-informatika'
 
 interface CourseData {
   kode: string
@@ -32,6 +35,8 @@ interface CourseData {
   nilai: string
   n: number
 }
+
+type JurusanType = 'RPL' | 'Informatika'
 
 const nilaiToAngka = (nilai: string): number => {
   const konversi: Record<string, number> = {
@@ -59,7 +64,17 @@ const getGradeColor = (grade: string): string => {
   return colors[grade] || 'bg-gray-500'
 }
 
-const getAllowedSemesters = (current: string): string[] => {
+const getAllowedSemesters = (
+  current: string,
+  mataKuliah: Record<
+    string,
+    {
+      kode: string
+      nama: string
+      sks: number
+    }[]
+  >,
+): string[] => {
   const currentNumber = Number.parseInt(current.split(' ')[1])
   const parity = currentNumber % 2
   return Object.keys(mataKuliah).filter((smt) => {
@@ -71,6 +86,7 @@ const getAllowedSemesters = (current: string): string[] => {
 }
 
 export default function CourseSelectionApp() {
+  const [jurusan, setJurusan] = useState<JurusanType | ''>('RPL')
   const [selectedSemester, setSelectedSemester] = useState<string>('')
   const [sourceSemester, setSourceSemester] = useState<string>('')
   const [selectedCourse, setSelectedCourse] = useState<string>('')
@@ -79,6 +95,23 @@ export default function CourseSelectionApp() {
     type: 'error' | 'success'
     message: string
   } | null>(null)
+
+  const mataKuliah = useMemo(
+    () =>
+      jurusan === 'RPL'
+        ? mataKuliahRPL
+        : jurusan === 'Informatika'
+          ? mataKuliahInformatika
+          : {},
+    [jurusan],
+  )
+
+  useEffect(() => {
+    setSelectedSemester('')
+    setSourceSemester('')
+    setSelectedCourse('')
+    setData([])
+  }, [jurusan])
 
   useEffect(() => {
     if (!selectedSemester) return
@@ -105,7 +138,7 @@ export default function CourseSelectionApp() {
       message: `Loaded ${filteredCourses.length} courses from ${selectedSemester}`,
     })
     setTimeout(() => setShowAlert(null), 3000)
-  }, [selectedSemester])
+  }, [selectedSemester, mataKuliah])
 
   const handleAddCourse = () => {
     if (!sourceSemester || !selectedCourse) return
@@ -172,7 +205,7 @@ export default function CourseSelectionApp() {
 
   const semesterOptions = Object.keys(mataKuliah)
   const allowedSemesterOptions = selectedSemester
-    ? getAllowedSemesters(selectedSemester)
+    ? getAllowedSemesters(selectedSemester, mataKuliah)
     : []
   const availableCourses =
     sourceSemester && mataKuliah[sourceSemester]
@@ -204,6 +237,34 @@ export default function CourseSelectionApp() {
           </div>
         </div>
 
+        {/* Pilih Jurusan */}
+        <Card className="shadow-sm border border-gray-200 bg-white">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-xl text-gray-900">
+              <BookOpen className="w-5 h-5 text-gray-700" />
+              Select Major
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4">
+              <Badge
+                onClick={() => setJurusan('RPL')}
+                variant={jurusan === 'RPL' ? 'default' : 'outline'}
+                className="cursor-pointer text-base py-2 px-4 transition-all hover:bg-gray-200"
+              >
+                RPL
+              </Badge>
+              <Badge
+                onClick={() => setJurusan('Informatika')}
+                variant={jurusan === 'Informatika' ? 'default' : 'outline'}
+                className="cursor-pointer text-base py-2 px-4 transition-all hover:bg-gray-200"
+              >
+                Informatika
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+
         {showAlert && (
           <Alert
             className={`${
@@ -229,37 +290,39 @@ export default function CourseSelectionApp() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <Card className="shadow-sm border border-gray-200 bg-white">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-xl text-gray-900">
-                  <BookOpen className="w-5 h-5 text-gray-700" />
-                  Select Current Semester
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Select
-                  value={selectedSemester}
-                  onValueChange={setSelectedSemester}
-                >
-                  <SelectTrigger className="h-12 text-base border-gray-300 hover:border-gray-400 transition-colors text-gray-900">
-                    <SelectValue placeholder="Choose your current semester" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {semesterOptions.map((smt) => (
-                      <SelectItem
-                        key={smt}
-                        value={smt}
-                        className="text-base py-3 text-gray-900"
-                      >
-                        {smt}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
+            {jurusan && (
+              <Card className="shadow-sm border border-gray-200 bg-white">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-xl text-gray-900">
+                    <BookOpen className="w-5 h-5 text-gray-700" />
+                    Select Current Semester
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Select
+                    value={selectedSemester}
+                    onValueChange={setSelectedSemester}
+                  >
+                    <SelectTrigger className="h-12 text-base border-gray-300 hover:border-gray-400 transition-colors text-gray-900">
+                      <SelectValue placeholder="Choose your current semester" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {semesterOptions.map((smt) => (
+                        <SelectItem
+                          key={smt}
+                          value={smt}
+                          className="text-base py-3 text-gray-900"
+                        >
+                          {smt}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CardContent>
+              </Card>
+            )}
 
-            {selectedSemester && (
+            {jurusan && selectedSemester && (
               <Card className="shadow-sm border border-gray-200 bg-white">
                 <CardHeader className="pb-4">
                   <CardTitle className="flex items-center gap-2 text-xl text-gray-900">
@@ -400,7 +463,9 @@ export default function CourseSelectionApp() {
                                   >
                                     <div className="flex items-center gap-2">
                                       <div
-                                        className={`w-2 h-2 rounded-full ${getGradeColor(grade)}`}
+                                        className={`w-2 h-2 rounded-full ${getGradeColor(
+                                          grade,
+                                        )}`}
                                       />
                                       {grade}
                                     </div>

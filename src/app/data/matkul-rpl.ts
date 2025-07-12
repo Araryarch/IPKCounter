@@ -1,4 +1,4 @@
-export const mataKuliah: Record<
+export const mataKuliahRPL: Record<
   string,
   { kode: string; nama: string; sks: number }[]
 > = {
