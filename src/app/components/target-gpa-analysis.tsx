@@ -1,11 +1,22 @@
 'use client'
 
 import { useState } from 'react'
-import { TrendingUp, Calculator, AlertCircle } from 'lucide-react'
+import { z } from 'zod'
+import { TrendingUp, Calculator, AlertCircle, Info } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+
+const gpaSchema = z.string().refine(
+  (val) => {
+    const num = parseFloat(val)
+    return !isNaN(num) && num >= 0 && num <= 4
+  },
+  {
+    message: 'GPA harus antara 0.00 dan 4.00',
+  },
+)
 
 interface TargetGPAAnalysisProps {
   targetGPA: string
@@ -21,8 +32,18 @@ export function TargetGPAAnalysis({
   const [inputGPA, setInputGPA] = useState(targetGPA)
   const [analyzed, setAnalyzed] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleAnalyze = () => {
+    const parsed = gpaSchema.safeParse(inputGPA)
+
+    if (!parsed.success) {
+      setError(parsed.error.errors[0].message)
+      setAnalyzed(false)
+      return
+    }
+
+    setError('')
     setLoading(true)
     setAnalyzed(false)
     setTimeout(() => {
@@ -59,12 +80,15 @@ export function TargetGPAAnalysis({
             placeholder="Enter your target GPA"
             className="h-11 border-gray-300 hover:border-gray-400 transition-colors"
           />
+          {error && (
+            <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+              <Info className="w-3 h-3" />
+              {error}
+            </p>
+          )}
         </div>
-        <Button
-          onClick={handleAnalyze}
-          disabled={!inputGPA || loading}
-          className="w-full"
-        >
+
+        <Button onClick={handleAnalyze} disabled={loading} className="w-full">
           {loading ? 'Analyzing...' : 'Analyze'}
         </Button>
 
