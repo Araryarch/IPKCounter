@@ -19,7 +19,7 @@ export interface GradeScenario {
   totalE: number
 }
 
-export type JurusanType = 'RPL' | 'Informatika'
+export type JurusanType = 'RPL' | 'Informatika' | 'RKA'
 
 export interface AlertState {
   type: 'error' | 'success'
