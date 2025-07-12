@@ -4,6 +4,7 @@ import { BookOpen } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import type { JurusanType } from '@/types/data'
+import { allMataKuliah } from '../data/matkul'
 
 interface MajorSelectionProps {
   jurusan: JurusanType | ''
@@ -20,21 +21,17 @@ export function MajorSelection({ jurusan, setJurusan }: MajorSelectionProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex gap-4">
-          <Badge
-            onClick={() => setJurusan('RPL')}
-            variant={jurusan === 'RPL' ? 'default' : 'outline'}
-            className="cursor-pointer text-base py-2 px-4 transition-all hover:bg-gray-200"
-          >
-            RPL
-          </Badge>
-          <Badge
-            onClick={() => setJurusan('Informatika')}
-            variant={jurusan === 'Informatika' ? 'default' : 'outline'}
-            className="cursor-pointer text-base py-2 px-4 transition-all hover:bg-gray-200"
-          >
-            Informatika
-          </Badge>
+        <div className="flex flex-wrap gap-4">
+          {Object.keys(allMataKuliah).map((key) => (
+            <Badge
+              key={key}
+              onClick={() => setJurusan(key as JurusanType)}
+              variant={jurusan === key ? 'default' : 'outline'}
+              className="cursor-pointer text-base py-2 px-4 transition-all hover:bg-gray-200"
+            >
+              {key}
+            </Badge>
+          ))}
         </div>
       </CardContent>
     </Card>

@@ -11,9 +11,6 @@ import type {
 } from '@/types/data'
 import { nilaiToAngka, MAX_CREDITS } from '@/constants/convert'
 import { getAllowedSemesters, generateGradeScenarios } from '@/lib/scenario'
-import { mataKuliahRPL } from './data/matkul-rpl'
-import { mataKuliahInformatika } from './data/matkul-informatika'
-
 import { MajorSelection } from './components/major-selection'
 import { SemesterSelection } from './components/semester-selection'
 import { CourseAddition } from './components/course-addition'
@@ -22,6 +19,7 @@ import { TargetGPAAnalysis } from './components/target-gpa-analysis'
 import { GradeScenarios } from './components/grade-scenarios'
 import { SidebarStats } from './components/sidebar-stats'
 import { AlertNotification } from './components/alert-notification'
+import { allMataKuliah } from './data/matkul'
 
 export default function CourseSelectionApp() {
   const [jurusan, setJurusan] = useState<JurusanType | ''>('RPL')
@@ -35,16 +33,10 @@ export default function CourseSelectionApp() {
   const [showAlert, setShowAlert] = useState<AlertState | null>(null)
 
   const mataKuliah = useMemo(
-    () =>
-      jurusan === 'RPL'
-        ? mataKuliahRPL
-        : jurusan === 'Informatika'
-          ? mataKuliahInformatika
-          : {},
+    () => (jurusan ? allMataKuliah[jurusan] : {}),
     [jurusan],
   )
 
-  // Reset state when major changes
   useEffect(() => {
     setSelectedSemester('')
     setSourceSemester('')
@@ -54,7 +46,6 @@ export default function CourseSelectionApp() {
     setScenarios([])
   }, [jurusan])
 
-  // Load courses when semester changes
   useEffect(() => {
     if (!selectedSemester) return
 
@@ -82,7 +73,6 @@ export default function CourseSelectionApp() {
     setTimeout(() => setShowAlert(null), 3000)
   }, [selectedSemester, mataKuliah])
 
-  // Generate scenarios when target GPA or data changes
   useEffect(() => {
     if (!targetGPA || data.length === 0) {
       setScenarios([])
@@ -174,7 +164,6 @@ export default function CourseSelectionApp() {
     )
   }
 
-  // Computed values
   const semesterOptions = Object.keys(mataKuliah)
   const allowedSemesterOptions = selectedSemester
     ? getAllowedSemesters(selectedSemester, mataKuliah)
@@ -196,7 +185,6 @@ export default function CourseSelectionApp() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
         <div className="text-center space-y-4">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-900 rounded-2xl shadow-sm">
             <GraduationCap className="w-8 h-8 text-white" />
@@ -212,15 +200,12 @@ export default function CourseSelectionApp() {
           </div>
         </div>
 
-        {/* Major Selection */}
         <MajorSelection jurusan={jurusan} setJurusan={setJurusan} />
 
-        {/* Alert Notification */}
         <AlertNotification alert={showAlert} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            {/* Semester Selection */}
             {jurusan && (
               <SemesterSelection
                 selectedSemester={selectedSemester}
@@ -229,7 +214,6 @@ export default function CourseSelectionApp() {
               />
             )}
 
-            {/* Course Addition */}
             {jurusan && selectedSemester && (
               <CourseAddition
                 sourceSemester={sourceSemester}
@@ -242,7 +226,6 @@ export default function CourseSelectionApp() {
               />
             )}
 
-            {/* Course List */}
             <CourseList
               data={data}
               totalSKS={totalSKS}
@@ -250,7 +233,6 @@ export default function CourseSelectionApp() {
               onRemoveCourse={handleRemoveCourse}
             />
 
-            {/* Target GPA Analysis */}
             {data.length > 0 && ungradedCourses.length > 0 && (
               <TargetGPAAnalysis
                 targetGPA={targetGPA}
@@ -259,7 +241,6 @@ export default function CourseSelectionApp() {
               />
             )}
 
-            {/* Grade Scenarios */}
             <GradeScenarios
               scenarios={scenarios}
               ungradedCourses={ungradedCourses}
@@ -268,7 +249,6 @@ export default function CourseSelectionApp() {
             />
           </div>
 
-          {/* Sidebar Stats */}
           <SidebarStats
             data={data}
             totalSKS={totalSKS}
